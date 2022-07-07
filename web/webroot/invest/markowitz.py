@@ -1,3 +1,4 @@
+from operator import rshift
 import pandas as pd
 # import quandl
 import pandas_datareader as web
@@ -12,6 +13,7 @@ import numpy as np
 import base64
 from io import BytesIO
 import scipy.optimize as sco
+import scipy.interpolate as sci
 
 class Markowitz:
     def __init__(self, selected , titles, debt_name, start_time, end_time):
@@ -225,9 +227,58 @@ class Markowitz:
         print(sharpe_portfolio.T);
         return {"min_variance_port":min_variance_port.T,"sharpe_portfolio":sharpe_portfolio.T,"ims":ims};
     
+
+    def min_func_portfolio(self, weights):
+        return self.statistics(weights)[1]
+
+    def getTangentPoint(self):
+        num_assets = len(self.selected);
+        weights = np.random.random(num_assets);
+        weights /= np.sum(weights)
+        bnds = tuple((0, 1) for x in weights)
+
+        target_returns = np.linspace(0.0, 1, 50)
+        target_volatilities = []
+        for tret in target_returns:
+            cons = ({'type': 'eq', 'fun': lambda x:  self.statistics(x)[0] - tret},
+                    {'type': 'eq', 'fun': lambda x:  np.sum(x) - 1})
+            res = sco.minimize(self.min_func_portfolio, num_assets * [1. / num_assets,], method = 'SLSQP',
+                            bounds = bnds, constraints = cons)
+            tfun = round(res['fun'],8)
+            # if len(target_volatilities) > 0 and target_volatilities[-1] == tfun :
+            #     print('--> TVOLS dupl value='.format(target_volatilities[-1]))
+            #     break     
+            target_volatilities.append(tfun)
+        # target_volatilities = np.array(target_volatilities)
+        # if len(target_returns) > len(target_volatilities) :
+        #     target_returns = np.resize(target_returns, len(target_volatilities))
+        ##  print('  TVOLS = {}\n   TRETS={}'.format(tvols, trets))    
+
+        ind = np.argmin(target_volatilities)        # returns index of smallest element  
+        efficient_volatilities = target_volatilities[ind:]       # takes values greater than the min variance
+        efficient_returns = target_returns[ind:]                                    ####
+        tck = sci.splrep(efficient_volatilities, efficient_returns)     # BSpline object representation
+        # tck is a tuple (t,c,k) containing the vector of knots, the B-spline coefficients, and the degree of the spline.
+
+        def f(x):
+            ''' Efficient frontier function (splines approximation). '''
+            return sci.splev(x, tck, der = 0)         # evaluate a BSpline
+        def df(x):
+            ''' First derivative of efficient frontier function. '''
+            return sci.splev(x, tck, der = 1)         # evaluate a BSpline with first derivation
+
+
+        def equations(p, rf = 0.01):
+            eq1 = rf - p[0]
+            eq2 = rf + p[1] * p[2] - f(p[2])
+            eq3 = p[1] - df(p[2])
+            return eq1, eq2, eq3
+
+        opt = sco.fsolve(equations, [0.8, 0.8, 0.84])
+        print(opt)
+        risk_free_interest_rate  = self.get_last_risk_free_interest_rate(self.risk_free_national_debt, self.start_time, self.end_time);
+        result = np.round(equations(opt, risk_free_interest_rate), 6)
+        print(result)
+        return [result, opt]
     
-
-
-
-
-
+      
