@@ -1,0 +1,14 @@
+{%extends "base.html" %} 
+{% block mainbody %}
+<div class="data_distribution">
+    <div class="show_img">
+        <img src="{{ pricePlot }}" alt="价格图"/>
+    </div>
+    {% for model in models %}
+    <li> 得到{{model.title}}模型为 R1 = {{model.fit.params.0}} + {{model.fit.params.1}}Rm + e1</li>
+    {% endfor %}
+    <div class="show_img">
+        <img src="{{ portfolioPlot }}" alt="组合图"/>
+    </div>
+</div>
+{% endblock %}
