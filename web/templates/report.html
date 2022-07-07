@@ -8,7 +8,15 @@
     <li> 得到{{model.title}}模型为 R1 = {{model.fit.params.0}} + {{model.fit.params.1}}Rm + e1</li>
     {% endfor %}
     <div class="show_img">
+        <p>最大夏普投资组合为{{sharpe_portfolio}}</p>
+        <p>最小风险投资组合{{min_variance_port}}</p>
+    </div>
+    <div class="show_img">
         <img src="{{ portfolioPlot }}" alt="组合图"/>
     </div>
+    <div class="show_img">
+        使用SLSQP算法计算最佳夏普投资组合为{{portfolioBySQP}}
+    </div>
+    
 </div>
 {% endblock %}

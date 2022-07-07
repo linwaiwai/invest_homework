@@ -1,5 +1,3 @@
-from operator import mod
-from pickle import TRUE
 import pandas as pd
 # import quandl
 import pandas_datareader as web
@@ -13,6 +11,7 @@ import statsmodels.api as sm
 import numpy as np
 import base64
 from io import BytesIO
+import scipy.optimize as sco
 
 class Markowitz:
     def __init__(self, selected , titles, debt_name, start_time, end_time):
@@ -22,6 +21,7 @@ class Markowitz:
         self.start_time = start_time;
         self.end_time = end_time;
         self.spc_adjclose =  self.month_change("S&P 500" , "^GSPC", self.start_time, self.end_time);
+        self.table = self.getData();
 
 
     def get_risk_free_interest_rate(self, debt_name, start, end):
@@ -63,9 +63,46 @@ class Markowitz:
 
         clean = data.set_index('date');
         table = clean.pivot(columns='ticker');
+        
         return table;
+
+    def statistics(self, weights):    
+        
+        #根据权重，计算资产组合收益率/波动率/夏普率。
+        #输入参数
+        #==========
+        #weights : array-like 权重数组
+        #权重为股票组合中不同股票的权重    
+        #返回值
+        #=======
+        #pret : float
+        #      投资组合收益率
+        #pvol : float
+        #      投资组合波动率
+        #pret / pvol : float
+        #    夏普率，为组合收益率除以波动率，此处不涉及无风险收益率资产
+        #
+        table = self.table;
+        returns_daily = table.pct_change();
+        returns_annual = returns_daily.mean() * 252;
+        weights = np.array(weights)
+        pret = returns = np.dot(weights, returns_annual);
+        pvol = np.sqrt(np.dot(weights.T, np.dot(returns_daily.cov() * 252, weights)))
+        return np.array([pret, pvol, pret / pvol])
+
+    def min_func_sharpe(self, weights):
+        return -self.statistics(weights)[2]
+
+    def getSharpBySLSQP(self):
+        table = self.table;
+        number_of_assets = len(self.selected);
+        bnds = tuple((0, 1) for x in range(number_of_assets));
+        cons = ({'type': 'eq', 'fun': lambda x: np.sum(x) - 1});
+        opts = sco.minimize(self.min_func_sharpe, number_of_assets * [1. / number_of_assets,], method='SLSQP',  bounds=bnds, constraints=cons)
+        return opts;
     
-    def getPricePlot(self, table):
+    def getPricePlot(self):
+        table = self.table;
         plt.figure(figsize=(14, 7))
         for c in table.columns.values:
             plt.plot(table.index, table[c], lw=3, alpha=0.8,label=c[1])
@@ -99,12 +136,14 @@ class Markowitz:
             i += 1;
         return models;
 
-    def getPortfolioPlot(self, table):
-        
+    
+
+    def getPortfolio(self):
+        table = self.table;
         returns_daily = table.pct_change();
-        returns_annual = returns_daily.mean() * 250;
+        returns_annual = returns_daily.mean() * 252;
         cov_daily = returns_daily.cov();
-        cov_annual = cov_daily * 250;
+        cov_annual = cov_daily * 252;
 
         port_returns = [];
         port_volatility = [];
@@ -156,6 +195,8 @@ class Markowitz:
         sharpe_portfolio = df.loc[df['Sharpe Ratio'] == max_sharpe];
         min_variance_port = df.loc[df['Volatility'] == min_volatility];
 
+       
+
         plt.style.use('seaborn-dark');
         df.plot.scatter(x='Volatility', y='Returns', c='Sharpe Ratio',
                         cmap='RdYlGn', edgecolors='black', figsize=(10, 8), grid=True);
@@ -173,15 +214,16 @@ class Markowitz:
         plt.ylabel('Expected Returns');
         plt.title('Efficient Frontier');
         # plt.show();
-        print(min_variance_port.T);
-        print(sharpe_portfolio.T);
+     
         buffer = BytesIO()
         plt.savefig(buffer, format='png', bbox_inches='tight', pad_inches=0.0)
         plot_data = buffer.getvalue()
         imb = base64.encodebytes(plot_data,)   
         ims = imb.decode()
         plt.close()
-        return ims;
+        print(min_variance_port.T);
+        print(sharpe_portfolio.T);
+        return {"min_variance_port":min_variance_port.T,"sharpe_portfolio":sharpe_portfolio.T,"ims":ims};
     
     
 
