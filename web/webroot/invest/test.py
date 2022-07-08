@@ -9,6 +9,6 @@ end_time = datetime.datetime(2022,7,1);
 markowitz = Markowitz(selected, titles, risk_free_national_debt, start_time, end_time);
 
 t_point =  markowitz.getTangentPoint();
-
+tartgetPlot = markowitz.getTargetPlot(t_point[2], t_point[3]);
 if (t_point[0][0] < 0):
     print("无法求出结果");

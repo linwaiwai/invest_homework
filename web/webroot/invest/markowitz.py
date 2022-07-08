@@ -6,7 +6,7 @@ import datetime
 import os 
 import matplotlib
 # 后台执行，如果需要使用本地运行
-matplotlib.use('Agg')
+
 import matplotlib.pyplot as plt
 import statsmodels.api as sm
 import numpy as np
@@ -14,6 +14,7 @@ import base64
 from io import BytesIO
 import scipy.optimize as sco
 import scipy.interpolate as sci
+
 
 class Markowitz:
     def __init__(self, selected , titles, debt_name, start_time, end_time):
@@ -202,16 +203,19 @@ class Markowitz:
         plt.style.use('seaborn-dark');
         df.plot.scatter(x='Volatility', y='Returns', c='Sharpe Ratio',
                         cmap='RdYlGn', edgecolors='black', figsize=(10, 8), grid=True);
+
         plt.scatter(x=sharpe_portfolio['Volatility'], y=sharpe_portfolio['Returns'], c='red', marker='D', s=200);
         x = list(sharpe_portfolio['Volatility'])[0];
         y = list(sharpe_portfolio['Returns'])[0];
+        plt.text(np.round(x,4)+0.01,np.round(y,4),(np.round(x,4),np.round(y,4)),ha='left',va='bottom',fontsize=10, color="red")
 
         plt.plot([0, x] , [risk_free_interest_rate, y] ,color = 'r')
-        plt.text(np.round(x,4)+0.01,np.round(y,4),(np.round(x,4),np.round(y,4)),ha='left',va='bottom',fontsize=10, color="red")
+
         plt.scatter(x=min_variance_port['Volatility'], y=min_variance_port['Returns'], c='blue', marker='D', s=200 )
         x = list(min_variance_port['Volatility'])[0];
         y = list(min_variance_port['Returns'])[0];
         plt.text(np.round(x,4)+0.01,np.round(y,4),(np.round(x,4),np.round(y,4)),ha='left',va='bottom',fontsize=10, color="white");
+
         plt.xlabel('Volatility (Std. Deviation)');
         plt.ylabel('Expected Returns');
         plt.title('Efficient Frontier');
@@ -225,7 +229,7 @@ class Markowitz:
         plt.close()
         print(min_variance_port.T);
         print(sharpe_portfolio.T);
-        return {"min_variance_port":min_variance_port.T,"sharpe_portfolio":sharpe_portfolio.T,"ims":ims};
+        return {"min_variance_port":min_variance_port.T,"sharpe_portfolio":sharpe_portfolio.T,"ims":ims,"df":df};
     
 
     def min_func_portfolio(self, weights):
@@ -237,26 +241,32 @@ class Markowitz:
         weights /= np.sum(weights)
         bnds = tuple((0, 1) for x in weights)
 
-        target_returns = np.linspace(0.0, 1, 50)
+        target_sample = np.linspace(0.0, 1, 50)
+        target_returns = [];
         target_volatilities = []
-        for tret in target_returns:
+        i = 0;
+        for tret in target_sample:
             cons = ({'type': 'eq', 'fun': lambda x:  self.statistics(x)[0] - tret},
                     {'type': 'eq', 'fun': lambda x:  np.sum(x) - 1})
             res = sco.minimize(self.min_func_portfolio, num_assets * [1. / num_assets,], method = 'SLSQP',
                             bounds = bnds, constraints = cons)
             tfun = round(res['fun'],8)
-            # if len(target_volatilities) > 0 and target_volatilities[-1] == tfun :
-            #     print('--> TVOLS dupl value='.format(target_volatilities[-1]))
-            #     break     
+          
+            if len(target_volatilities) > 0 and target_volatilities[-1] == tfun :
+                print('--> TVOLS dupl value={value}'.format(value=target_volatilities[-1]))
+                i += 1;
+                continue
             target_volatilities.append(tfun)
-        # target_volatilities = np.array(target_volatilities)
-        # if len(target_returns) > len(target_volatilities) :
-        #     target_returns = np.resize(target_returns, len(target_volatilities))
-        ##  print('  TVOLS = {}\n   TRETS={}'.format(tvols, trets))    
+            target_returns.append(target_sample[i]);
+            i += 1;
+        target_returns = np.array(target_returns);
+        target_volatilities = np.array(target_volatilities)
 
         ind = np.argmin(target_volatilities)        # returns index of smallest element  
         efficient_volatilities = target_volatilities[ind:]       # takes values greater than the min variance
         efficient_returns = target_returns[ind:]                                    ####
+        efficient_volatilities, efficient_returns = (list(t) for t in zip(*sorted(zip(efficient_volatilities, efficient_returns))))
+
         tck = sci.splrep(efficient_volatilities, efficient_returns)     # BSpline object representation
         # tck is a tuple (t,c,k) containing the vector of knots, the B-spline coefficients, and the degree of the spline.
 
@@ -268,17 +278,47 @@ class Markowitz:
             return sci.splev(x, tck, der = 1)         # evaluate a BSpline with first derivation
 
 
-        def equations(p, rf = 0.01):
+        def equations(p, rf = 0.03):
             eq1 = rf - p[0]
             eq2 = rf + p[1] * p[2] - f(p[2])
             eq3 = p[1] - df(p[2])
             return eq1, eq2, eq3
 
-        opt = sco.fsolve(equations, [0.8, 0.8, 0.84])
-        print(opt)
         risk_free_interest_rate  = self.get_last_risk_free_interest_rate(self.risk_free_national_debt, self.start_time, self.end_time);
+        opt = sco.fsolve(equations, [0.8, 0.8, 0.84], [risk_free_interest_rate])
+        print(opt)
         result = np.round(equations(opt, risk_free_interest_rate), 6)
         print(result)
-        return [result, opt]
-    
-      
+        return [result, opt, target_volatilities, target_returns]
+    def getTargetPlot(self, target_volatilities, target_returns, df):
+        #画散点图
+        plt.style.use('seaborn-dark');
+        plt.figure(figsize=(9, 5))
+        df.plot.scatter(x='Volatility', y='Returns', c='Sharpe Ratio',
+                        cmap='RdYlGn', edgecolors='black', figsize=(10, 8), grid=True);
+        #圆点为随机资产组合
+        # plt.scatter(portfolio_volatilities, portfolio_returns,
+        #             c=portfolio_returns / portfolio_volatilities, marker='o')
+        #叉叉为有效边界            
+        plt.scatter(target_volatilities, target_returns,
+                    c=target_returns / target_volatilities, marker='x')
+        # #红星为夏普率最大值的资产组合            
+        # plt.plot(self.statistics(opts['x'])[1], self.statistics(opts['x'])[0],
+        #         'r*', markersize=15.0)
+        # #黄星为最小方差的资产组合            
+        # plt.plot(self.statistics(optv['x'])[1], self.statistics(optv['x'])[0],
+        #         'y*', markersize=15.0)
+        #             # minimum variance portfolio
+        plt.grid(True)
+        plt.xlabel('Volatility (Std. Deviation)');
+        plt.ylabel('Expected Returns');
+        plt.title('Efficient Frontier');
+        plt.colorbar(label='Edge Sharpe Ratio')
+        # plt.show();
+        buffer = BytesIO()
+        plt.savefig(buffer, format='png', bbox_inches='tight', pad_inches=0.0)
+        plot_data = buffer.getvalue()
+        imb = base64.encodebytes(plot_data)   
+        ims = imb.decode()
+        plt.close()
+        return ims;

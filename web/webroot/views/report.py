@@ -3,7 +3,9 @@ from django.shortcuts import render
 from pandas.core.algorithms import mode
 from webroot.invest.markowitz import Markowitz;
 import datetime;
+import matplotlib
 def index(request):
+    matplotlib.use('Agg')
     context = {};
     selected = ['LI', 'NIO', 'XPEV'];
     titles = ["小鹏", '蔚来', '理想'];
@@ -26,6 +28,8 @@ def index(request):
     opts = markowitz.getSharpBySLSQP();
 
     t_point =  markowitz.getTangentPoint();
+    tartgetPlot = markowitz.getTargetPlot(t_point[2], t_point[3], portfolio['df']);
+    tartgetPlotSrc = 'data:image/png;base64,' + str(tartgetPlot)
     # 画股票价格图
     context['pricePlot'] = pricePlotSrc;
     # 投资模型
@@ -37,5 +41,10 @@ def index(request):
     context['sharpe_portfolio'] = sharpe_portfolio;
     # 通过SLSQP算法计算最佳投资比率；
     context["portfolioBySQP"] = opts['x'];
+    # 画出有效边界图
+    context['tartgetPlotSrc'] = tartgetPlotSrc;
+    
+
+
     context["t_point"] = t_point;
     return render(request, 'report.html', context)
