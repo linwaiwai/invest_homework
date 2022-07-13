@@ -4,15 +4,19 @@ from pandas.core.algorithms import mode
 from webroot.invest.markowitz import Markowitz;
 import datetime;
 import matplotlib
+from webroot.invest.excelDatasource import ExcelDatasource;
 def index(request):
     matplotlib.use('Agg')
     context = {};
-    selected = ['LI', 'NIO', 'XPEV'];
-    titles = ["小鹏", '蔚来', '理想'];
+    # selected = ['LI', 'NIO', 'XPEV'];
+    selected =["000623.SZ", "002736.SZ", "600030.SH"]
     risk_free_national_debt = '^FVX';
-    start_time = datetime.datetime(2020,9,1);
-    end_time = datetime.datetime(2022,7,1);
-    markowitz = Markowitz(selected, titles, risk_free_national_debt, start_time, end_time);
+    # start_time = datetime.datetime(2020,9,1);
+    # end_time = datetime.datetime(2022,7,1);
+    start_time = datetime.datetime(2019,1,1);
+    end_time = datetime.datetime(2020,1,1);
+    datasource = ExcelDatasource(start_time, end_time, "/Users/linwaiwai/Documents/私人/MBA/IN/sample/",selected, "000001.SH");
+    markowitz = Markowitz(selected, risk_free_national_debt, start_time, end_time, datasource);
     month_changes = markowitz.getMonthChanges();
     models = markowitz.getModels(month_changes);
 

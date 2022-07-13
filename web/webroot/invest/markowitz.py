@@ -17,15 +17,15 @@ import scipy.interpolate as sci
 
 
 class Markowitz:
-    def __init__(self, selected , titles, debt_name, start_time, end_time):
+    def __init__(self, selected , debt_name, start_time, end_time, datasource):
+        self.datasource = datasource;
         self.selected = selected;
-        self.titles = titles;
         self.risk_free_national_debt = debt_name;
         self.start_time = start_time;
         self.end_time = end_time;
-        self.spc_adjclose =  self.month_change("S&P 500" , "^GSPC", self.start_time, self.end_time);
+        self.datasource.setSelected(selected);
+        self.spc_adjclose =  self.datasource.getMonthStardardData();
         self.table = self.getData();
-
 
     def get_risk_free_interest_rate(self, debt_name, start, end):
         df = web.DataReader(debt_name,'yahoo', start, end);
@@ -37,33 +37,18 @@ class Markowitz:
         interest = (df.tail(1)["Adj Close"].values[0])/100
         return interest;
 
-    def month_change(self, title, code, start, end):
-        data = web.DataReader(code,'yahoo',start, end)
-        pct_change = data.resample('1M').mean().pct_change().dropna();
-        print("{start_time_str}——{end_time_str}{stock_title}月收益".format(stock_title=title, start_time_str=self.start_time.strftime("%Y年%m月%d日"), end_time_str=self.end_time.strftime("%Y年%m月%d日")));
-        print(pct_change);
-        adjclose = np.array(pct_change["Adj Close"])
-        # plt.title(title);
-        # adjclose["Adj Close"].plot();
-        # plt.show();
-        return adjclose;
-
     def getMonthChanges(self):
         i=0;
         datas = [];
         for code in self.selected:
-            data = self.month_change(self.titles[i], code, self.start_time,  self.end_time);
+            data = self.datasource.getMonthDataByCode(code);
             datas.append(data);
             i += 1;
         return datas;
 
 
     def getData(self):
-        data = web.DataReader(self.selected,'yahoo', self.start_time, self.end_time);
-        data = data.stack(level = 1).reset_index(level = [0, 1], drop = False).reset_index();
-        df = data[['Date','Adj Close','Symbols']];
-        data = df.rename(columns={'Date':'date', 'Symbols':'ticker', 'Adj Close':'adj_close'})
-
+        data = self.datasource.getDatas();
         clean = data.set_index('date');
         table = clean.pivot(columns='ticker');
         
@@ -130,9 +115,9 @@ class Markowitz:
                 X = sm.add_constant(self.spc_adjclose);
                 model = sm.OLS(adjclose, X);
                 fit = model.fit();
-                # print(fit.summary());
+                print(fit.summary());
                 # print(fit.params);
-                models.append({"title":self.titles[i], "fit":fit});
+                models.append({"title":code, "fit":fit});
                 # print(fit.rsquared)
             else:
                 print("数组长度不一样");
