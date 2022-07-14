@@ -13,8 +13,9 @@ def index(request):
     risk_free_national_debt = '^FVX';
     # start_time = datetime.datetime(2020,9,1);
     # end_time = datetime.datetime(2022,7,1);
-    start_time = datetime.datetime(2019,1,1);
-    end_time = datetime.datetime(2020,1,1);
+    # start_time = datetime.datetime(2015,1,5);
+    start_time = datetime.datetime(2018,4,30);
+    end_time = datetime.datetime(2019,4,30);
     datasource = ExcelDatasource(start_time, end_time, "/Users/linwaiwai/Documents/私人/MBA/IN/sample/",selected, "000001.SH");
     markowitz = Markowitz(selected, risk_free_national_debt, start_time, end_time, datasource);
     month_changes = markowitz.getMonthChanges();

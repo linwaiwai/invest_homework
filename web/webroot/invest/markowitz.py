@@ -110,7 +110,7 @@ class Markowitz:
         i = 0
         models = [];
         for code in self.selected:
-            adjclose = pct_change_datas[0];
+            adjclose = pct_change_datas[i];
             if (adjclose.size == self.spc_adjclose.size):
                 X = sm.add_constant(self.spc_adjclose);
                 model = sm.OLS(adjclose, X);
@@ -270,7 +270,7 @@ class Markowitz:
             return eq1, eq2, eq3
 
         risk_free_interest_rate  = self.get_last_risk_free_interest_rate(self.risk_free_national_debt, self.start_time, self.end_time);
-        opt = sco.fsolve(equations, [0.8, 0.8, 0.84], [risk_free_interest_rate])
+        opt = sco.fsolve(equations, [0.3, 0, 0.7], [risk_free_interest_rate])
         print(opt)
         result = np.round(equations(opt, risk_free_interest_rate), 6)
         print(result)

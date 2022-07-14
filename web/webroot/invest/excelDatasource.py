@@ -1,4 +1,4 @@
-from webroot.invest.datasource import Datasource;
+from .datasource import Datasource;
 import pandas as pd;
 import numpy as np
 class ExcelDatasource(Datasource):
