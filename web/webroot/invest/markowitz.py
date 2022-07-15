@@ -24,7 +24,7 @@ class Markowitz:
         self.start_time = start_time;
         self.end_time = end_time;
         self.datasource.setSelected(selected);
-        self.spc_adjclose =  self.datasource.getMonthStardardData();
+        self.spc_adjclose =  self.datasource.getMonthStardardDatas();
         self.table = self.getData();
 
     def get_risk_free_interest_rate(self, debt_name, start, end):
@@ -111,7 +111,7 @@ class Markowitz:
         models = [];
         for code in self.selected:
             adjclose = pct_change_datas[i];
-            if (adjclose.size == self.spc_adjclose.size):
+            if (len(adjclose) == len(self.spc_adjclose)):
                 X = sm.add_constant(self.spc_adjclose);
                 model = sm.OLS(adjclose, X);
                 fit = model.fit();

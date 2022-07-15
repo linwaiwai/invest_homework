@@ -25,7 +25,7 @@ class YahooDatasource(Datasource):
         # plt.show();
         return adjclose;
 
-    def getMonthStardardData(self):
+    def getMonthStardardDatas(self):
         data = self.getStardard();
         adjclose = self.month_change("S&P 500", data);
         return adjclose;

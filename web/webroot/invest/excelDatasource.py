@@ -1,13 +1,13 @@
-from .datasource import Datasource;
+from datasource import Datasource;
 import pandas as pd;
 import numpy as np
 class ExcelDatasource(Datasource):
-    def __init__(self, start_time, end_time, fold_path, codes, stardard_code):
+    def __init__(self, start_time, end_time, fold_path, codes, stardard_codes):
         self.start_time = start_time
         self.end_time = end_time
         self.codes = codes;
         self.fold_path = fold_path;
-        self.stardard_code = stardard_code;
+        self.stardard_codes = stardard_codes;
 
     def getCodeFilePath(self, code):
         file_path = self.fold_path + code + ".csv";
@@ -29,10 +29,17 @@ class ExcelDatasource(Datasource):
         # data.set_index("date");
         return data;
 
-    def getMonthStardardData(self):
-        data = self.getDataByCode(self.stardard_code);
-        adjclose = self.month_change(self.stardard_code, data);
-        return adjclose;
+    def getMonthStardardDatas(self):
+        # adjcloses = np.ndarray([len(self.stardard_codes), 1]);
+        i = 0;
+        adjcloses = [];
+        for code in self.stardard_codes:
+            data = self.getDataByCode(code);
+            adjclose = self.month_change(code, data);  
+            adjcloses.append(adjclose);
+        # adjcloses.reshape(len(self.stardard_codes),len(adjclose));
+        adjcloses = np.column_stack(adjcloses);
+        return adjcloses;
         
     def getMonthDataByCode(self, code):
         # data = web.DataReader(code,'yahoo',start, end)
