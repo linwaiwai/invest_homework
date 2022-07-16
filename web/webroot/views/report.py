@@ -9,14 +9,15 @@ def index(request):
     matplotlib.use('Agg')
     context = {};
     # selected = ['LI', 'NIO', 'XPEV'];
-    selected =["000623.SZ", "002736.SZ", "600030.SH"]
+    selected =["000623.SZ", "002736.SZ", "600030.SH"];
+    stardards_code = ["000001.SH", "uso.NYSE"];
     risk_free_national_debt = '^FVX';
     # start_time = datetime.datetime(2020,9,1);
     # end_time = datetime.datetime(2022,7,1);
     # start_time = datetime.datetime(2015,1,5);
-    start_time = datetime.datetime(2018,4,30);
-    end_time = datetime.datetime(2019,4,30);
-    datasource = ExcelDatasource(start_time, end_time, "/Users/linwaiwai/Documents/私人/MBA/IN/sample/",selected, "000001.SH");
+    start_time = datetime.datetime(2018,5,30);
+    end_time = datetime.datetime(2019,5,30);
+    datasource = ExcelDatasource(start_time, end_time, "/Users/linwaiwai/Documents/私人/MBA/IN/sample/",selected, stardards_code);
     markowitz = Markowitz(selected, risk_free_national_debt, start_time, end_time, datasource);
     month_changes = markowitz.getMonthChanges();
     models = markowitz.getModels(month_changes);
